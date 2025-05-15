@@ -1,0 +1,125 @@
+import json
+import base64
+import os
+from openai import OpenAI
+import traceback  # Import traceback for detailed error info
+
+def handler(event, context):
+    try:
+        print("TTS function called with event:", json.dumps(event))
+        
+        # Extract the body, handle both string and dict formats
+        body_raw = event.get('body', '{}')
+        if isinstance(body_raw, str):
+            body = json.loads(body_raw)
+        else:
+            body = body_raw
+            
+        print("Parsed body:", json.dumps(body))
+        
+        text = body.get('text')
+        voice = body.get('voice', 'nova')  # Default voice
+        instructions = body.get('instructions', '')  # Optional speech instructions
+        
+        print(f"Processing TTS request: text='{text}' (truncated to 50 chars if longer), voice={voice}")
+        
+        if not text:
+            print("Error: Missing required parameter 'text'")
+            return {
+                "statusCode": 400, 
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*", 
+                    "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+                },
+                "body": json.dumps({"error": "Missing required parameter: text"})
+            }
+        
+        # Initialize OpenAI client
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            print("Error: OPENAI_API_KEY environment variable not set")
+            return {
+                "statusCode": 500, 
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*", 
+                    "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+                },
+                "body": json.dumps({"error": "API key configuration error"})
+            }
+            
+        print(f"Using OpenAI API key: {api_key[:4]}...{api_key[-4:] if len(api_key) > 8 else ''}")
+        client = OpenAI(api_key=api_key)
+        print("OpenAI client initialized successfully")
+        
+        # Generate speech using OpenAI TTS
+        print(f"Calling OpenAI TTS API with voice={voice}")
+        try:
+            # First try with the newer model
+            tts_args = {
+                "model": "gpt-4o-mini-tts",  # Using the newer TTS model
+                "voice": voice,
+                "input": text
+            }
+            
+            # Add instructions if provided
+            if instructions:
+                tts_args["instructions"] = instructions
+                
+            print(f"TTS request args: {json.dumps(tts_args)}")
+            tts_response = client.audio.speech.create(**tts_args)
+            print("OpenAI TTS API call successful with gpt-4o-mini-tts model")
+        except Exception as tts_error:
+            print(f"Error with gpt-4o-mini-tts model: {str(tts_error)}")
+            print("Falling back to tts-1 model")
+            
+            # Fall back to the older model if the newer one fails
+            tts_args = {
+                "model": "tts-1",
+                "voice": voice,
+                "input": text
+            }
+            
+            # Add instructions if provided
+            if instructions:
+                tts_args["instructions"] = instructions
+                
+            print(f"TTS fallback request args: {json.dumps(tts_args)}")
+            tts_response = client.audio.speech.create(**tts_args)
+            print("OpenAI TTS API call successful with tts-1 model")
+        
+        # Convert audio to base64
+        audio_b64 = base64.b64encode(tts_response.content).decode("utf-8")
+        print(f"Audio converted to base64 (length: {len(audio_b64)} characters)")
+        
+        # Return response with CORS headers
+        result = {
+            "audio": audio_b64
+        }
+        
+        response = {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*", 
+                "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+            },
+            "body": json.dumps(result)
+        }
+        print("Returning successful response")
+        return response
+        
+    except Exception as e:
+        error_details = traceback.format_exc()
+        print(f"Error in TTS function: {str(e)}")
+        print(f"Detailed error: {error_details}")
+        return {
+            "statusCode": 500, 
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*", 
+                "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+            },
+            "body": json.dumps({"error": str(e), "details": error_details})
+        }

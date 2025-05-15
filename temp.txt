@@ -1,0 +1,95 @@
+import json
+import base64
+import os
+from openai import OpenAI
+
+SUPPORTED_FORMATS = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+
+def handler(event, context):
+    try:
+        body = json.loads(event.get('body', '{}'))
+        user_input = body.get('text')
+        audio_b64 = body.get('audio')
+        audio_format = body.get('format', 'mp3').lower()
+        dialect = body.get('dialect', 'egyptian')
+        user_name = body.get('userName', '')
+        messages = body.get('messages', [])
+        is_initial = body.get('isInitial', False)
+        context_message = body.get('context', '')  # Single context parameter
+        is_simulation = body.get('isSimulation', False)  # Flag to distinguish lessons from simulations
+        
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        # Handle audio input if provided
+        if audio_b64:
+            if audio_format not in SUPPORTED_FORMATS:
+                return {"statusCode": 400, "body": json.dumps({"error": f"Unsupported format: {audio_format}. Supported formats: {SUPPORTED_FORMATS}"})}
+            try:
+                audio_bytes = base64.b64decode(audio_b64)
+            except Exception:
+                return {"statusCode": 400, "body": json.dumps({"error": "Invalid base64 audio encoding."})}
+            fname = f"/tmp/input_audio.{audio_format}"
+            with open(fname, "wb") as f:
+                f.write(audio_bytes)
+            with open(fname, "rb") as f:
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=f
+                )
+            user_input = transcript.text
+        elif not user_input and not is_initial:
+            return {"statusCode": 400, "body": json.dumps({"error": "Missing input: provide either 'text' or 'audio'."})}
+
+        # Set up conversation with system prompt
+        greeting = f"Hello{' ' + user_name if user_name else ''}! " if user_name else ""
+        
+        # Create base system prompt with context if provided
+        if is_simulation:
+            # For conversation simulations
+            system_prompt = f"{greeting}You are a conversational partner speaking {dialect} Arabic. Always respond in both {dialect} Arabic and English. Keep your responses short and conversational, like chatting with a friend. Limit each response to 1-3 sentences in each language. Make gentle corrections only when necessary, without lengthy explanations."
+        else:
+            # For lessons
+            system_prompt = f"{greeting}You are an Arabic tutor teaching {dialect} Arabic. Always respond in both {dialect} Arabic and English. Keep your responses short and conversational, like chatting with a friend. Limit each response to 1-3 sentences in each language. Make quick, gentle corrections when needed, without lengthy explanations."
+        
+        if context_message:
+            system_prompt += f" {context_message}"
+            
+        # Add guidance on when to complete the lesson (for regular lessons only)
+        if not is_simulation:
+            system_prompt += " After the student has practiced this topic in 3-5 exchanges, wrap up by saying 'You've completed this lesson' or 'Lesson complete' in your response."
+        
+        # Add guidance for initial message
+        if is_initial:
+            if is_simulation:
+                system_prompt += " For your first message, start the conversation naturally as specified in the context. Be friendly and conversational - avoid any teaching or lesson format."
+            else:
+                system_prompt += " For your first message, immediately jump into teaching the lesson with energy - include a quick greeting, then introduce a key phrase or concept from this lesson topic and ask the student to practice it. Don't waste time with lengthy introductions."
+        
+        gpt_messages = [{"role": "system", "content": system_prompt}]
+        
+        if messages:
+            gpt_messages.extend(messages)
+        
+        if user_input and not is_initial:
+            gpt_messages.append({"role": "user", "content": user_input})
+        elif is_initial:
+            if is_simulation:
+                gpt_messages.append({"role": "user", "content": "Let's start our conversation."})
+            else:
+                gpt_messages.append({"role": "user", "content": "Let's start our lesson."})
+
+        chat_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=gpt_messages
+        )
+        ai_reply = chat_response.choices[0].message.content
+
+        return {
+            "statusCode": 200, 
+            "body": json.dumps({
+                "message": ai_reply,
+                "input": user_input
+            }, ensure_ascii=False)
+        }
+    except Exception as e:
+        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}

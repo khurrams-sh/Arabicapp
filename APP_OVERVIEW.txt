@@ -1,0 +1,76 @@
+Saylo AI - Speak Arabic
+
+1. App Description
+------------------
+Saylo AI is a mobile language‑learning app (iOS & Android) that helps users practice spoken Arabic via a voice chat interface. It uses Expo/React Native on the frontend and a serverless edge function backed by OpenAI Whisper (for transcription), GPT-4o (for conversation), and TTS (for audio replies). User data and lesson progress are persisted in Supabase.
+
+2. Core Features
+----------------
+• Onboarding & Profile
+  - Supabase Auth for sign‑up/sign‑in
+  - Profile table stores: user name, chosen dialect (Egyptian, Levantine, Gulf, MSA)
+
+• Free Talk / Role‑play Lessons
+  - User selects a scenario (e.g. "Ordering at a restaurant")
+  - VoiceChat component records audio (AirPods or built‑in mic), uploads base64 to edge function
+  - Edge function transcribes audio, appends conversation history, invokes GPT-4o with dynamic system prompt
+  - GPT-4o replies in audio (TTS) and text
+  - Frontend plays audio and renders message bubbles
+
+• Lesson Tracking & Completion
+  - OPTION 1: AI‑driven tracking via system prompt logic
+    systemPrompt = `
+    You are an Arabic tutor helping the user practice the "Ordering at a restaurant" scenario in Levantine Arabic.
+
+    Your job is to:
+    • Guide them through a basic restaurant ordering dialogue (greeting → order → total → goodbye)
+    • Make sure they say at least 5 key phrases relevant to this topic
+    • When you feel the user has completed the goal, say "Well done! This lesson is now complete."
+
+    Do not end early. Only say this if the task is complete.
+    `
+  - Frontend watches for the final AI message containing "This lesson is now complete" and triggers end-of‑lesson UI (modal, badge, recap)
+
+3. Data Persistence (Supabase schema)
+-------------------------------------
+• users        (id, email, etc.)
+• profiles     (id, user_id → users.id, name, dialect)
+• lessons      (id, title, scenario, dialect_plan, etc.)
+• user_lessons (id, user_id, lesson_id, status, last_activity)
+• lesson_messages (id, user_lesson_id, role, content, created_at)
+
+4. VoiceChat Component
+----------------------
+• Records audio via Expo‑AV
+• Handles slide-to-cancel, duration timer, mic mode vs. text mode
+• Builds messages array: includes dynamic system prompt and history
+• Posts { audio/text, format, tts:true, messages } to edge function endpoint
+• Renders transcript and AI replies, persists to Supabase
+
+5. Edge Function (Python)
+-------------------------
+• Reads JSON body: text, audio (base64), format, tts, messages (history)
+• Validates & decodes audio, writes to /tmp, calls Whisper for transcription
+• Merges: system prompt + history + current user turn
+• Calls OpenAI chat.completions (gpt-4o) and optional audio.speech.create (tts-1)
+• Returns JSON { message, audio (base64), input (transcript) }
+
+6. Dialect Unit Plans
+---------------------
+• Supported dialects: Egyptian, Levantine, Gulf, and Modern Standard Arabic (MSA)
+• Each dialect follows a multi-unit curriculum covering:
+  - Pronunciation & foundational sounds
+  - Everyday conversation & small talk
+  - Scenario-based roleplay (e.g., ordering, directions)
+  - Advanced dialogues & cultural insights
+
+7. Next Steps
+-------------
+1. Implement Supabase schema & authentication
+2. Build profile/onboarding screens
+3. Wire VoiceChat component into lesson flow
+4. Test AI-driven lesson-completion logic
+5. Polish UI, error handling, and performance
+6. Iterate on prompts, corrections, and review capabilities
+
+This file serves as a high‑level blueprint for Saylo AI – Speak Arabic. 
