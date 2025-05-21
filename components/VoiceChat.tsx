@@ -59,7 +59,6 @@ interface VoiceChatProps {
 
 const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChatProps>(({ lessonId, unitId, inModal = false, onLessonCompleted, modalVisible = true, customContext = '', isSimulation = false }, ref) => {
   /* ─────────────── state & refs ─────────────── */
-  console.log(`VoiceChat mounted with:`, { lessonId, unitId, inModal, modalVisible, customContext, isSimulation });
   
   // Initialize audioEnabled based on modalVisible if in modal mode
   const initialAudioEnabled = inModal ? modalVisible : true;
@@ -176,17 +175,11 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
     // Only request initial message if we don't have messages yet
     // AND the component is visible (not in a modal OR modal is visible)
     if (messages.length === 0 && (!inModal || modalVisible)) {
-      console.log('Requesting initial message - visibility check passed:', 
-        { inModal, modalVisible, messagesCount: messages.length });
-      
       // Small delay to ensure dialect is loaded
       const timer = setTimeout(() => {
         requestInitialMessage();
       }, 300);
       return () => clearTimeout(timer);
-    } else if (messages.length === 0) {
-      console.log('Not requesting initial message - component not visible:', 
-        { inModal, modalVisible });
     }
   }, [dialect?.id, inModal, modalVisible, messages.length]);
 
@@ -203,8 +196,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
       const lessonIdToComplete = currentLessonId;
       const unitIdToComplete = currentUnitId;
       
-      console.log(`Completing lesson ${lessonIdToComplete} in unit ${unitIdToComplete}`);
-      
       // Store current streak value before completion
       const checkStreakIncrease = async () => {
         const beforeStreak = streak;
@@ -214,7 +205,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         
         // Check if streak increased
         if (streak > beforeStreak) {
-          console.log(`Streak increased from ${beforeStreak} to ${streak}!`);
           setStreakIncreased(true);
         }
       };
@@ -259,10 +249,7 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         
         // Only record if practice was at least 1 minute
         if (practiceMinutes >= 1) {
-          console.log(`Recording ${practiceMinutes} minutes of practice`);
-          addPracticeMinutes(practiceMinutes).catch(err => {
-            console.error('Failed to record practice minutes:', err);
-          });
+          addPracticeMinutes(practiceMinutes).catch(() => {});
         }
       }
     };
@@ -273,8 +260,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
     // Setup audio mode immediately on component mount
     const setupAudio = async () => {
       try {
-        console.log('Setting up audio system...');
-        
         // First ensure audio is enabled
         await Audio.setIsEnabledAsync(true);
         
@@ -290,9 +275,8 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         });
         
         setAudioEnabled(true);
-        console.log('Audio system initialized successfully');
       } catch (error) {
-        console.error('Failed to set up audio system:', error);
+        // Audio setup failed
       }
     };
     
@@ -301,7 +285,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
     
     // Return cleanup function to stop all audio when component unmounts
     return () => {
-      console.log('VoiceChat unmounting - stopping all audio');
       killAllAudio();
     };
   }, []);
@@ -314,18 +297,14 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
     // This effect controls audio playback based on component visibility
     // When in a modal, visibility is controlled by the modalVisible prop
     if (inModal) {
-      console.log('Modal visibility changed:', modalVisible);
-      
       // Update audio enabled state based on modal visibility
       setAudioEnabled(modalVisible);
       
       if (!modalVisible) {
-        console.log('Modal not visible - killing all audio and disabling audio system');
         // Kill audio immediately when component becomes invisible
         killAllAudio();
       } else {
         // Modal is now visible - ensure audio system is properly initialized
-        console.log('Modal is now visible - ensuring audio system is ready');
         Audio.setIsEnabledAsync(true);
       }
     } else {
@@ -340,7 +319,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
     if (ref && typeof ref === 'object' && 'current' in ref) {
       ref.current = {
         stopAllAudio: async () => {
-          console.log('stopAllAudio called through ref');
           return await stopAllAudio();
         }
       };
@@ -422,7 +400,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
   /* ─────── global audio kill function ─────── */
   const killAllAudio = () => {
     // Synchronous function that kills all audio immediately
-    console.log("Emergency audio kill activated");
     
     // Disable all audio
     Audio.setIsEnabledAsync(false);
@@ -447,8 +424,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
 
   /* ─────── stop all audio playback ─────── */
   const stopAllAudio = async () => {
-    console.log('Stopping all audio playback');
-    
     // Start with hard kill
     killAllAudio();
     
@@ -459,7 +434,7 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
           await soundRef.current.stopAsync();
           await soundRef.current.unloadAsync();
         } catch (error: any) {
-          console.log('Error stopping sound:', error);
+          // Error handling
         } finally {
           soundRef.current = null;
           setIsPlaying(null);
@@ -468,7 +443,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
       
       return true;
     } catch (error: any) {
-      console.log('Error in stopAllAudio:', error);
       return false;
     }
   };
@@ -477,14 +451,12 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
   const playAudio = async (b64: string, messageId?: string) => {
     // Validate audio data first
     if (!b64 || typeof b64 !== 'string' || b64.length < 100) {
-      console.error('Invalid audio data - skipping playback, length:', b64 ? b64.length : 0);
       return;
     }
     
     // Only play if audio is enabled and the component is visible
     // For modal mode, explicitly check that modalVisible is true
     if (!audioEnabled || (inModal && !modalVisible)) {
-      console.log('Audio blocked - audioEnabled:', audioEnabled, 'inModal:', inModal, 'modalVisible:', modalVisible);
       return;
     }
     
@@ -497,7 +469,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         await soundRef.current.stopAsync().catch(() => {});
         await soundRef.current.unloadAsync().catch(() => {});
         soundRef.current = null;
-        setIsPlaying(null);
       }
       
       // Create and play the audio
@@ -523,8 +494,7 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         }
       }, 30000); // 30 second max
     } catch (error) {
-      console.error('Error playing audio:', error);
-      setIsPlaying(null);
+      // Error handling
     }
   };
 
@@ -645,7 +615,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
       
       await addAssistantMessage(message);
     } catch (error) {
-      console.error('API request error:', error);
       await addAssistantMessage('Sorry, I had trouble connecting. Please try again.', false);
     } finally {
       setIsLoading(false);
@@ -703,7 +672,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
     // For modal mode, explicitly check that modalVisible is true
     if (audioEnabled && (!inModal || modalVisible)) {
       try {
-        console.log('Fetching TTS audio for assistant message');
         const audioB64 = await fetchTTSAudio(message);
         
         // Update the message with audio
@@ -717,10 +685,10 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
           }
         }
       } catch (err) {
-        console.error('TTS error, continuing without audio');
+        // TTS error handling
       }
     } else {
-      console.log('Skipping audio for assistant message - component not visible or audio disabled');
+      // Skipping audio for assistant message - component not visible or audio disabled
     }
     
     // Add the message to the conversation
@@ -839,8 +807,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
   // Simplified TTS function
   const fetchTTSAudio = async (text: string): Promise<string | null> => {
     try {
-      console.log('Requesting TTS for:', text.substring(0, 30) + '...');
-      
       const requestBody = { 
         text: text,
         voice: 'nova'
@@ -853,7 +819,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
       });
       
       if (!response.ok) {
-        console.error('TTS API error:', response.status);
         return null;
       }
       
@@ -862,18 +827,14 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
       try {
         const data = JSON.parse(rawText);
         if (data.audio && typeof data.audio === 'string' && data.audio.length > 100) {
-          console.log('TTS audio received, length:', data.audio.length);
           return data.audio;
         } else {
-          console.error('Invalid TTS audio data');
           return null;
         }
       } catch (err) {
-        console.error('Error parsing TTS response:', err);
         return null;
       }
     } catch (err) {
-      console.error('TTS fetch error:', err);
       return null;
     }
   };
@@ -908,8 +869,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         
       // Make the API request directly rather than through makeApiRequest
       try {
-        console.log('Making initial API request...');
-        
         // Simplified API request parameters
         const finalRequestBody = {
           text: initialContext,
@@ -932,7 +891,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         }
         
         const rawData = await response.json();
-        console.log('Initial API response received');
         
         const { message } = parseApiResponse(rawData);
         
@@ -961,15 +919,12 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         // THEN get and play audio separately to ensure UI doesn't block
         if (audioEnabled && (!inModal || modalVisible)) {
           try {
-            console.log('Requesting TTS audio for initial message...');
             // Small delay to ensure message is displayed first
             await new Promise(resolve => setTimeout(resolve, 100));
             
             const audioB64 = await fetchTTSAudio(message);
             
             if (audioB64 && typeof audioB64 === 'string' && audioB64.length > 100) {
-              console.log('Setting audio for initial message, length:', audioB64.length);
-              
               // Update the message with audio in state
               setMessages(prev => [{
                 ...prev[0],
@@ -981,37 +936,32 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
               setTimeout(() => {
                 // Only play if component is still visible
                 if (audioEnabled && (!inModal || modalVisible)) {
-                  console.log('Playing initial message audio...');
                   playAudio(audioB64, botMessage.id);
-                } else {
-                  console.log('Skipping audio playback - component no longer visible');
                 }
               }, 500);
             } else {
-              console.error('Failed to get valid audio for initial message');
+              // Error handling
             }
           } catch (err) {
-            console.error('TTS failed for initial message:', err);
+            // TTS failed for initial message
           }
         } else {
-          console.log('Audio disabled for initial message');
+          // Audio disabled for initial message
         }
       } catch (error) {
-        console.error('API request error:', error);
+        // API request error
         
         // Fallback message
-        const fallbackMessage = {
+        setMessages([{
           id: genId(),
           text: 'Hello! I\'m your Arabic tutor. How can I help you practice today?',
           isUser: false,
           role: 'assistant',
           content: 'Hello! I\'m your Arabic tutor. How can I help you practice today?'
-        };
-        
-        setMessages([fallbackMessage]);
+        }]);
       }
     } catch (error) {
-      console.error('Initial message error:', error);
+      // Initial message error
       
       // Fallback message if API fails
       setMessages([{
@@ -1057,7 +1007,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         dialect: dialect?.id || 'egyptian'
       });
     } catch (error) {
-      console.error('Send audio error:', error);
       Alert.alert('Error', 'Failed to communicate with the server');
       setIsLoading(false);
     }
@@ -1111,7 +1060,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         dialect: dialect?.id || 'egyptian'
       });
     } catch (error) {
-      console.error('Send text error:', error);
       Alert.alert('Error', 'Failed to communicate with the server');
       setIsLoading(false);
     }
@@ -1160,7 +1108,6 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
       intervalRef.current = setInterval(() => setDuration((t) => t + 1), 1000);
       setIsRecording(true);
     } catch (e) {
-      console.error(e);
       Alert.alert('Recording Error', 'Could not start. Check permissions.');
     }
   };
@@ -1188,7 +1135,7 @@ const VoiceChat = forwardRef<{ stopAllAudio: () => Promise<boolean> }, VoiceChat
         await sendAudio(uri);
       }
     } catch (e) {
-      console.error('stopRecording', e);
+      // stopRecording error handling
     } finally {
       cancelledRef.current = false;
     }
@@ -1866,15 +1813,11 @@ const styles = StyleSheet.create({
 // Debug function to test audio system
 const troubleshootAudioSystem = async () => {
   try {
-    console.log('Audio troubleshooting started');
-    
     // 1. Check audio permissions
     const { status } = await Audio.requestPermissionsAsync();
-    console.log('Audio permissions status:', status);
     
     // 2. Test audio system enablement
     const isEnabled = await Audio.setIsEnabledAsync(true);
-    console.log('Audio system enabled:', isEnabled);
     
     // 3. Configure audio mode
     await Audio.setAudioModeAsync({
@@ -1885,7 +1828,6 @@ const troubleshootAudioSystem = async () => {
       interruptionModeAndroid: 1,
       playThroughEarpieceAndroid: false
     });
-    console.log('Audio mode configured');
     
     // 4. Test small sound
     try {
@@ -1893,7 +1835,6 @@ const troubleshootAudioSystem = async () => {
         require('@/assets/sounds/click.mp3'),
         { shouldPlay: true, volume: 1.0 }
       );
-      console.log('Test sound playing');
       
       // Wait for completion
       await new Promise(resolve => {
@@ -1908,15 +1849,12 @@ const troubleshootAudioSystem = async () => {
       });
       
       await sound.unloadAsync();
-      console.log('Test sound completed');
       
       return true;
     } catch (e) {
-      console.error('Test sound failed:', e);
       return false;
     }
   } catch (e) {
-    console.error('Audio troubleshooting failed:', e);
     return false;
   }
 };

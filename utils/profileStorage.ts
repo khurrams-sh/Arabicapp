@@ -82,7 +82,7 @@ export async function saveProfileData(key: string, value: any) {
         .insert({ user_id: user.id, [column]: value });
     }
   } catch (error) {
-    console.error(`Error saving ${key}:`, error);
+    // Handle error silently
   }
 }
 
@@ -144,7 +144,7 @@ export async function getProfileData(key: string) {
     
     return null;
   } catch (error) {
-    console.error(`Error getting ${key}:`, error);
+    // Handle error silently
     return null;
   }
 }
@@ -164,7 +164,7 @@ export async function getAllProfileData(): Promise<UserProfile | null> {
     
     return profile;
   } catch (error) {
-    console.error('Error getting profile data:', error);
+    // Handle error silently
     return null;
   }
 } 

@@ -20,8 +20,6 @@ export default function ConversationScreen() {
   const context = params.context as string || '';
   const isSimulation = params.isSimulation === 'true';
 
-  console.log("Rendering conversation screen with params:", { lessonId, unitId, title, isSimulation, context });
-
   return (
     <>
       <Stack.Screen

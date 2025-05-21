@@ -15,22 +15,14 @@ function HomeContent() {
   const accentColor = useThemeColor({}, 'tint');
   const [hasSynced, setHasSynced] = useState(false);
   
-  // Debug logging
-  useEffect(() => {
-    console.log("HomeContent - isLoading:", isLoading);
-    console.log("HomeContent - hasSynced:", hasSynced);
-  }, [isLoading, hasSynced]);
-  
   // Sync with Supabase on initial load AND when lessonCompleted parameter is true
   useEffect(() => {
     const performSync = async () => {
       try {
-        console.log("Syncing with Supabase...");
         await syncWithSupabase();
         setHasSynced(true);
-        console.log("Sync successful");
       } catch (error) {
-        console.error("Error during sync:", error);
+        // Handle error silently
       } finally {
         // Clear the parameter to prevent multiple syncs if it exists
         if (params.lessonCompleted === 'true') {

@@ -44,7 +44,6 @@ export async function saveReminderTime(hour: number, minute: number) {
     await saveProfileData(REMINDER_TIME_KEY, reminderTime);
     return reminderTime;
   } catch (error) {
-    console.error('Error saving reminder time:', error);
     return null;
   }
 }
@@ -57,7 +56,6 @@ export async function getReminderTime() {
     
     // If no time found
     if (!reminderTime) {
-      console.log('No reminder time found in storage');
       return null;
     }
     
@@ -66,13 +64,11 @@ export async function getReminderTime() {
         typeof reminderTime.minute !== 'number' ||
         reminderTime.hour < 0 || reminderTime.hour > 23 ||
         reminderTime.minute < 0 || reminderTime.minute > 59) {
-      console.log('Invalid reminder time format in storage:', reminderTime);
       return null;
     }
     
     return reminderTime;
   } catch (error) {
-    console.error('Error getting reminder time:', error);
     return null;
   }
 }
@@ -80,13 +76,11 @@ export async function getReminderTime() {
 // Request notification permissions
 export async function requestNotificationPermissions() {
   if (!Device.isDevice) {
-    console.log('Running on simulator - will attempt to register for notifications anyway');
     // Continue with permissions request even on simulator for testing
   }
 
   // If running in Expo Go with SDK 53+, notify but don't attempt to register
   if (isExpoGo && Platform.OS === 'android') {
-    console.warn('Push notifications are not supported in Expo Go on Android with SDK 53+');
     return false;
   }
 
@@ -111,10 +105,8 @@ export async function requestNotificationPermissions() {
       });
     }
     
-    console.log('Notification permission status:', finalStatus);
     return finalStatus === 'granted';
   } catch (error) {
-    console.error('Error requesting notification permissions:', error);
     return false;
   }
 }
@@ -131,15 +123,12 @@ export async function scheduleDailyReminder(
     
     // If running in Expo Go with SDK 53+, just save time but don't schedule notifications
     if (isExpoGo && Platform.OS === 'android') {
-      console.warn('Push notifications not available in Expo Go on Android with SDK 53+');
-      console.log(`Reminder time saved (${hour}:${minute < 10 ? '0' + minute : minute}) but notification not scheduled`);
       return true; // Return true to allow onboarding to continue
     }
     
     // Ensure permissions are granted for other environments
     const permissionGranted = await requestNotificationPermissions();
     if (!permissionGranted) {
-      console.log('Notification permission not granted');
       return true; // Still return true to allow onboarding to continue
     }
     
@@ -161,8 +150,6 @@ export async function scheduleDailyReminder(
       scheduledTime.setDate(scheduledTime.getDate() + 1);
     }
     
-    console.log(`Scheduling notification for ${hour}:${minute < 10 ? '0' + minute : minute}`);
-    
     // Get random message if none provided
     const notificationMessage = message || getRandomNotificationMessage();
     
@@ -181,33 +168,14 @@ export async function scheduleDailyReminder(
         },
       });
       
-      console.log('Reminder scheduled with ID:', identifier);
-      
       // Check that the notification is actually scheduled
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      console.log('Number of scheduled notifications:', scheduledNotifications.length);
-      
-      if (scheduledNotifications.length === 0) {
-        console.warn('⚠️ No scheduled notifications found after scheduling. This is likely due to limitations in Expo Go.');
-        console.warn('Note: Daily notifications might not work correctly in Expo Go. Use a development build for full functionality.');
-      } else {
-        // Log the scheduled notification details
-        scheduledNotifications.forEach((notification, index) => {
-          console.log(`Scheduled notification ${index + 1}:`, {
-            identifier: notification.identifier,
-            trigger: notification.trigger,
-            content: notification.content
-          });
-        });
-      }
     } catch (error) {
-      console.error('Error scheduling notification:', error);
-      console.warn('Continuing without scheduling notification');
+      // Handle error silently
     }
     
     return true;
   } catch (error) {
-    console.error('Error in scheduleDailyReminder:', error);
     return true; // Still return true to allow onboarding to continue
   }
 }
@@ -217,7 +185,6 @@ export async function cancelAllNotifications() {
   try {
     return await Notifications.cancelAllScheduledNotificationsAsync();
   } catch (error) {
-    console.error('Error cancelling notifications:', error);
     return false;
   }
 }
@@ -227,7 +194,6 @@ export async function getAllScheduledNotifications() {
   try {
     return await Notifications.getAllScheduledNotificationsAsync();
   } catch (error) {
-    console.error('Error getting scheduled notifications:', error);
     return [];
   }
 } 

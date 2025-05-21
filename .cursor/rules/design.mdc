@@ -1,5 +1,17 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# Design Tokens
+
+- Theme: follows user's OS (light/dark)
+- Secondary (accent): #E5903A
+
+## Light Mode
+- background: #FFFFFF
+- text: #000000
+
+## Dark Mode
+- background: #151718
+- text: #FFFFFF

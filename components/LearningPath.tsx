@@ -126,10 +126,10 @@ const LessonNode = ({
   const shadowStyle = isCurrent ? {
     shadowColor: accentColor,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 10,
-    transform: [{ scale: 1.1 }]
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+    transform: [{ scale: 1.05 }]
   } : {};
 
   // Get icon for this lesson
@@ -364,12 +364,6 @@ export const LearningPath = () => {
   // Ref for voice chat component
   const voiceChatRef = useRef<{ stopAllAudio: () => Promise<boolean> }>(null);
   
-  // Debug logging
-  useEffect(() => {
-    console.log("LearningPath component - isLoading:", isLoading);
-    console.log("LearningPath component - units count:", displayUnits.length);
-  }, [isLoading, displayUnits]);
-  
   // Set a timeout to stop showing loading state after 2 seconds
   useEffect(() => {
     if (showLoading) {
@@ -387,8 +381,6 @@ export const LearningPath = () => {
     const lesson = unit?.lessons.find(l => l.id === lessonId);
     const title = lesson?.title || "Lesson";
     
-    console.log(`Starting lesson ${lessonId} in unit ${unitId} with title: ${title}`);
-    
     // Set the current lesson info
     setCurrentLessonId(lessonId);
     setCurrentUnitId(unitId);
@@ -401,7 +393,6 @@ export const LearningPath = () => {
   // Function to close the conversation modal
   const closeConversation = () => {
     // Kill all audio immediately in the most aggressive way possible
-    console.log("Forcefully disabling audio system before closing modal");
     
     // First disable the entire audio system
     Audio.setIsEnabledAsync(false);
@@ -422,7 +413,6 @@ export const LearningPath = () => {
   
   // Function to handle lesson completion
   const handleLessonCompleted = () => {
-    console.log("Lesson completed in modal, showing completion message");
     // User will close the modal manually when they're ready
     // Don't automatically close the modal
   };
@@ -442,7 +432,6 @@ export const LearningPath = () => {
   
   // Show loading state only for the first 2 seconds or if explicitly loading
   if ((isLoading && showLoading) || (showLoading && displayUnits.length === 0)) {
-    console.log("LearningPath is in loading state");
     return (
       <View style={[styles.loadingContainer, { paddingBottom: insets.bottom }]}>
         <FontAwesome5 name="book-reader" size={40} color={accentColor} style={{ marginBottom: 20 }} />
@@ -452,7 +441,6 @@ export const LearningPath = () => {
   }
   
   if (!displayUnits || displayUnits.length === 0) {
-    console.log("LearningPath has no units");
     return (
       <View style={[styles.loadingContainer, { paddingBottom: insets.bottom }]}>
         <FontAwesome5 name="exclamation-circle" size={40} color={accentColor} style={{ marginBottom: 20 }} />
@@ -461,8 +449,6 @@ export const LearningPath = () => {
     );
   }
   
-  console.log("LearningPath rendering with units:", displayUnits.length);
-  
   return (
     <>
       <ScrollView 
@@ -470,6 +456,7 @@ export const LearningPath = () => {
         contentContainerStyle={[
           styles.contentContainer,
           { 
+            paddingTop: Math.max(insets.top + 16, 16),
             paddingBottom: insets.bottom + 40,
             paddingLeft: Math.max(insets.left + 16, 16),
             paddingRight: Math.max(insets.right + 16, 16)
@@ -497,22 +484,28 @@ export const LearningPath = () => {
       >
         <ThemedView style={{ flex: 1 }}>
           <View style={[styles.modalHeader, { paddingTop: insets.top || 16 }]}>
-            <TouchableOpacity 
-              style={styles.closeButton} 
+            <TouchableOpacity
               onPress={closeConversation}
+              style={styles.closeButton}
             >
               <FontAwesome5 name="times" size={20} color={textColor} />
             </TouchableOpacity>
-            <View style={{ flex: 1 }} />
+            <ThemedText style={styles.modalTitle}>{currentLessonTitle}</ThemedText>
+            <View style={styles.placeholderView} />
           </View>
-          <VoiceChat 
-            ref={voiceChatRef}
-            lessonId={currentLessonId} 
-            unitId={currentUnitId} 
-            inModal={true}
-            modalVisible={showConversationModal}
-            onLessonCompleted={handleLessonCompleted}
-          />
+          
+          <View style={styles.conversationContainer}>
+            {showConversationModal && (
+              <VoiceChat 
+                lessonId={currentLessonId}
+                unitId={currentUnitId}
+                inModal={true}
+                modalVisible={showConversationModal}
+                onLessonCompleted={handleLessonCompleted}
+                ref={voiceChatRef}
+              />
+            )}
+          </View>
         </ThemedView>
       </Modal>
     </>
@@ -527,19 +520,18 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   unitContainer: {
-    marginBottom: 24,
+    marginBottom: 40,
   },
   unitHeader: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    position: 'relative',
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
   unitTitle: {
-    textAlign: 'center',
-    paddingHorizontal: 16,
+    fontSize: 20,
     fontWeight: '600',
+    flex: 1,
   },
   unitLockBadge: {
     width: 24,
@@ -547,18 +539,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 10,
   },
   pathContainer: {
     position: 'relative',
     width: '100%',
+    minHeight: 100,
   },
   lessonNodeWrapper: {
     position: 'absolute',
-    alignItems: 'center',
     width: nodeSize,
     height: nodeSize,
-    zIndex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   lessonNode: {
     width: nodeSize,
@@ -566,90 +559,87 @@ const styles = StyleSheet.create({
     borderRadius: nodeSize / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    position: 'relative',
-  },
-  lockIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#888',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#fff',
-  },
-  numberIndicator: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
-        shadowRadius: 1,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 4,
       },
     }),
-  },
-  numberText: {
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   connectingDot: {
     position: 'absolute',
     width: smallNodeSize,
     height: smallNodeSize,
     borderRadius: smallNodeSize / 2,
-    zIndex: 1,
+  },
+  lockIndicator: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#888',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  numberIndicator: {
+    position: 'absolute',
+    bottom: -8,
+    backgroundColor: '#fff',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  numberText: {
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   loadingText: {
     fontSize: 16,
     textAlign: 'center',
-    marginTop: 16,
   },
   footer: {
-    height: 60,
+    height: 40,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   closeButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.05)',
     width: 40,
     height: 40,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
+  },
+  placeholderView: {
+    width: 40,
+  },
+  conversationContainer: {
+    flex: 1,
   },
 });
 

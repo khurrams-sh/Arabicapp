@@ -29,7 +29,6 @@ export const saveProfileData = async (key: string, value: any): Promise<void> =>
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No authenticated user found');
       throw new Error('User not authenticated');
     }
     
@@ -45,7 +44,6 @@ export const saveProfileData = async (key: string, value: any): Promise<void> =>
     
     const column = columnMap[key];
     if (!column) {
-      console.error(`No column mapping found for key: ${key}`);
       throw new Error(`Invalid profile field: ${key}`);
     }
     
@@ -75,10 +73,7 @@ export const saveProfileData = async (key: string, value: any): Promise<void> =>
       
       if (error) throw error;
     }
-    
-    console.log(`Successfully saved ${key} (${column}): ${value}`);
   } catch (error) {
-    console.error('Error saving profile data', error);
     throw error;
   }
 };
@@ -92,7 +87,6 @@ export const getAllProfileData = async (): Promise<UserProfile> => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No authenticated user found');
       return {};
     }
     
@@ -104,12 +98,10 @@ export const getAllProfileData = async (): Promise<UserProfile> => {
       .single();
     
     if (error) {
-      console.error('Error fetching user profile:', error);
       return {};
     }
     
     if (!data) {
-      console.log('No profile data found for user');
       return {};
     }
     
@@ -125,7 +117,6 @@ export const getAllProfileData = async (): Promise<UserProfile> => {
       skills: data.skills
     };
   } catch (error) {
-    console.error('Error getting profile data', error);
     return {};
   }
 };

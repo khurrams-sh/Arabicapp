@@ -72,7 +72,6 @@ export function DialectProvider({ children }: { children: ReactNode }) {
           setDialectState(DIALECTS[0]);
         }
       } catch (error) {
-        console.error('Error loading dialect:', error);
         setDialectState(DIALECTS[0]); // Fallback to first dialect
       } finally {
         setIsLoading(false);
@@ -88,7 +87,7 @@ export function DialectProvider({ children }: { children: ReactNode }) {
       setDialectState(newDialect);
       await saveProfileData(DIALECT_KEY, newDialect.name);
     } catch (error) {
-      console.error('Error saving dialect:', error);
+      // Handle error silently
     }
   };
 

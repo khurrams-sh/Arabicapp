@@ -25,7 +25,6 @@ function RootLayoutNav() {
   // Navigation logic
   useEffect(() => {
     if (isLoading) {
-      console.log("Skipping navigation, still loading:", { isLoading });
       return;
     }
 
@@ -34,33 +33,23 @@ function RootLayoutNav() {
     const inTabsGroup = segments[0] === '(tabs)';
     const inConversation = segments[0] === 'conversation';
 
-    console.log("Navigation check - Current segment:", segments[0]);
-    console.log("Navigation check - User state:", user ? "Logged in" : "Not logged in");
-    console.log("Navigation check - Route path:", JSON.stringify(segments));
-
     try {
       // Simplified navigation logic with robust error handling
       if (user) {
         // User is signed in
-        console.log("User is signed in with ID:", user.id);
-        
         if (inAuthGroup || inOnboardingGroup) {
-          console.log("Redirecting authenticated user to tabs");
           // Redirect to tabs if already authenticated
           router.replace('/(tabs)');
         }
       } else {
         // User is not signed in
-        console.log("No user is signed in");
-        
         if (!inAuthGroup && !inOnboardingGroup) {
-          console.log("Redirecting unauthenticated user to welcome");
           // Always go to welcome screen if not signed in
           router.replace('/(onboarding)/welcome');
         }
       }
     } catch (error) {
-      console.error("Navigation error:", error);
+      // Navigation error handling
     }
   }, [user, segments, isLoading]);
 

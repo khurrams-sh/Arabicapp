@@ -195,9 +195,8 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const currentStreak = await checkAndUpdateStreak();
         setStreak(currentStreak);
-        console.log(`Initial streak check: ${currentStreak} days`);
       } catch (error) {
-        console.error('Error checking streak on mount:', error);
+        // Error handling
       }
     };
     
@@ -207,13 +206,11 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Sync progress with Supabase
   const syncWithSupabase = async () => {
     try {
-      console.log("syncWithSupabase - starting sync");
       setIsLoading(true);
       
       // Check if user is logged in
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.log("syncWithSupabase - no active session, using default data");
         // No active session, use initial data
         setUnits(initialUnits);
         setIsLoading(false);
@@ -222,19 +219,16 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       // Get completed lessons from Supabase
       const completedLessons = await getCompletedLessons();
-      console.log(`syncWithSupabase - fetched ${completedLessons.length} completed lessons`);
       
       // Get user stats for streak
       const stats = await getUserStats();
       
       if (stats) {
-        console.log(`syncWithSupabase - user has a streak of ${stats.streak_days} days`);
         setStreak(stats.streak_days);
       }
       
       if (completedLessons.length === 0) {
         // No completed lessons in the database yet
-        console.log("syncWithSupabase - no completed lessons found, using default progress");
         setUnits(initialUnits); // Ensure we set units even if no progress
         setIsLoading(false);
         return;
@@ -277,28 +271,19 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
       });
       
-      console.log("syncWithSupabase - updating unit data with progress");
       setUnits(updatedUnits);
     } catch (error) {
-      console.error('Error syncing with Supabase:', error);
       // In case of error, just use the initial units to avoid showing a loading screen forever
-      console.log("syncWithSupabase - error occurred, falling back to default data");
       setUnits(initialUnits);
     } finally {
-      console.log("syncWithSupabase - finished, setting isLoading to false");
       setIsLoading(false);
     }
   };
 
   // Complete a lesson and update progress
   const completeLesson = useCallback(async (lessonId: number, unitId: number) => {
-    console.log(`Completing lesson: ${lessonId} in unit: ${unitId}`);
-    
     // First save to Supabase
     const saved = await saveCompletedLesson(unitId, lessonId);
-    if (!saved) {
-      console.warn('Failed to save progress to Supabase, updating local state only');
-    }
     
     // Update local state
     const updatedUnits = units.map(unit => {

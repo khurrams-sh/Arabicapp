@@ -39,7 +39,6 @@ export const uploadAudioFile = async (audioBase64: string, fileName: string): Pr
     return url;
     */
   } catch (error) {
-    console.error('Error uploading audio file:', error);
     throw error;
   }
 }; 

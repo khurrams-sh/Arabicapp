@@ -18,7 +18,6 @@ export const getReminderTime = async (): Promise<ReminderTime | null> => {
     // In a real app, this would get the scheduled notification from storage
     return null;
   } catch (error) {
-    console.log('Error getting reminder time:', error);
     return null;
   }
 };
@@ -30,12 +29,10 @@ export const getReminderTime = async (): Promise<ReminderTime | null> => {
 export const scheduleDailyReminder = async (hour: number, minute: number): Promise<boolean> => {
   try {
     // Placeholder for notification scheduling
-    console.log(`Scheduling reminder for ${hour}:${minute}`);
     
     // In a real app, this would schedule a notification using Expo's API
     return true;
   } catch (error) {
-    console.log('Error scheduling reminder:', error);
     return false;
   }
 };
@@ -46,10 +43,9 @@ export const scheduleDailyReminder = async (hour: number, minute: number): Promi
  */
 export const cancelAllNotifications = async (): Promise<void> => {
   try {
-    console.log('Cancelling all notifications');
     // In a real app, this would cancel all notifications using Expo's API
   } catch (error) {
-    console.log('Error canceling notifications:', error);
+    // Handle error silently
   }
 };
 

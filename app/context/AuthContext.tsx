@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Mock implementation
         setIsSignedIn(true);
       } catch (error) {
-        console.error('Error checking authentication status:', error);
+        // Handle error silently
       }
     };
 
@@ -37,11 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string): Promise<boolean> => {
     try {
       // This would normally call an authentication API
-      console.log(`Signing in with ${email}`);
       setIsSignedIn(true);
       return true;
     } catch (error) {
-      console.error('Error signing in:', error);
       return false;
     }
   };
@@ -50,10 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async (): Promise<void> => {
     try {
       // This would normally call an API to invalidate session
-      console.log('Signing out');
       setIsSignedIn(false);
     } catch (error) {
-      console.error('Error signing out:', error);
+      // Handle error silently
     }
   };
 

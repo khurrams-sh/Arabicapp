@@ -44,22 +44,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error("Error getting session:", error.message);
           setIsLoading(false);
           return;
         }
         
         if (data.session) {
-          console.log("Found existing session for user:", data.session.user.id);
           setSession(data.session);
           setUser(data.session.user);
         } else {
-          console.log("No existing session found");
           // Do not create a fake user for production
           setIsLoading(false);
         }
       } catch (error) {
-        console.error("Unexpected error loading session:", error);
+        // Handle error silently
       } finally {
         setIsLoading(false);
       }
@@ -69,8 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed:", _event);
-      console.log("Session exists:", !!session);
       setSession(session);
       setUser(session?.user ?? null);
     });

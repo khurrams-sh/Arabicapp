@@ -9,7 +9,6 @@ export const triggerImpact = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   } catch (error) {
     // Fail silently - haptics might not be available on all devices
-    console.log('Haptics not available', error);
   }
 };
 
@@ -22,7 +21,6 @@ export const triggerSuccess = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   } catch (error) {
     // Fail silently
-    console.log('Haptics not available', error);
   }
 };
 
@@ -35,7 +33,6 @@ export const triggerError = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   } catch (error) {
     // Fail silently
-    console.log('Haptics not available', error);
   }
 };
 

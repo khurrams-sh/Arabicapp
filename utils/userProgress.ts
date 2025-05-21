@@ -26,7 +26,6 @@ export const saveCompletedLesson = async (
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No authenticated user found');
       return false;
     }
     
@@ -41,7 +40,6 @@ export const saveCompletedLesson = async (
     
     if (existingProgress) {
       // Lesson already completed
-      console.log(`Lesson ${lessonId} in unit ${unitId} already completed`);
       return true;
     }
     
@@ -55,7 +53,6 @@ export const saveCompletedLesson = async (
       });
     
     if (error) {
-      console.error('Error saving lesson progress:', error);
       return false;
     }
     
@@ -64,7 +61,6 @@ export const saveCompletedLesson = async (
     
     return true;
   } catch (error) {
-    console.error('Error in saveCompletedLesson:', error);
     return false;
   }
 };
@@ -76,7 +72,6 @@ export const getCompletedLessons = async (): Promise<UserProgress[]> => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No authenticated user found');
       return [];
     }
     
@@ -87,13 +82,11 @@ export const getCompletedLessons = async (): Promise<UserProgress[]> => {
       .eq('user_id', user.id);
     
     if (error) {
-      console.error('Error fetching completed lessons:', error);
       return [];
     }
     
     return data as UserProgress[];
   } catch (error) {
-    console.error('Error in getCompletedLessons:', error);
     return [];
   }
 };
@@ -105,7 +98,6 @@ export const getUserStats = async (): Promise<UserStats | null> => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No authenticated user found');
       return null;
     }
     
@@ -122,13 +114,11 @@ export const getUserStats = async (): Promise<UserStats | null> => {
         return await createInitialUserStats(user.id);
       }
       
-      console.error('Error fetching user stats:', error);
       return null;
     }
     
     return data as UserStats;
   } catch (error) {
-    console.error('Error in getUserStats:', error);
     return null;
   }
 };
@@ -144,13 +134,12 @@ const createInitialUserStats = async (userId: string): Promise<UserStats | null>
       .single();
       
     if (!checkError && existingStats) {
-      console.log('User stats already exist, returning existing stats');
       return existingStats as UserStats;
     }
     
     const initialStats = {
       user_id: userId,
-      streak_days: 0, // Start with 0 day streak (was 1)
+      streak_days: 0, // Start with 0 day streak
       last_active_date: new Date().toISOString().split('T')[0], // Current date
       total_lessons_completed: 0,
       total_practice_minutes: 0
@@ -163,12 +152,9 @@ const createInitialUserStats = async (userId: string): Promise<UserStats | null>
       .single();
     
     if (error) {
-      console.error('Error creating initial user stats:', error);
-      
       // If it's a duplicate key error, the user already has stats
       // Try to fetch existing stats instead
       if (error.code === '23505') {
-        console.log('User stats already exist, fetching them instead');
         const { data: existingStats, error: fetchError } = await supabase
           .from('user_stats')
           .select('*')
@@ -176,7 +162,6 @@ const createInitialUserStats = async (userId: string): Promise<UserStats | null>
           .single();
           
         if (fetchError) {
-          console.error('Error fetching existing user stats:', fetchError);
           return null;
         }
         
@@ -188,7 +173,6 @@ const createInitialUserStats = async (userId: string): Promise<UserStats | null>
     
     return data as UserStats;
   } catch (error) {
-    console.error('Error in createInitialUserStats:', error);
     return null;
   }
 };
@@ -219,7 +203,6 @@ const updateUserStats = async (userId: string): Promise<boolean> => {
             .single();
             
           if (retryError) {
-            console.error('Final error fetching user stats after creation attempt:', retryError);
             return false;
           }
           
@@ -227,7 +210,6 @@ const updateUserStats = async (userId: string): Promise<boolean> => {
           currentStats = retryStats;
         }
       } else {
-        console.error('Error fetching current user stats:', fetchError);
         return false;
       }
     }
@@ -240,36 +222,27 @@ const updateUserStats = async (userId: string): Promise<boolean> => {
     // Set to midnight to ensure proper day comparison
     lastActiveDate.setHours(0, 0, 0, 0);
     
-    // Get yesterday's date
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-    
     // Calculate days difference between last active and today
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
     const daysDifference = Math.floor((todayDate.getTime() - lastActiveDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    console.log(`Last active: ${currentStats.last_active_date}, Today: ${today}, Days difference: ${daysDifference}`);
     
     // Calculate streak
     let newStreak = currentStats.streak_days;
     
     if (daysDifference === 0) {
       // Same day, maintain streak
-      console.log(`Same day activity, maintaining streak at ${newStreak}`);
       // No change to streak
     } else if (daysDifference === 1) {
       // Consecutive day, increment streak
       newStreak += 1;
-      console.log(`Consecutive day, incrementing streak to ${newStreak}`);
     } else {
       // More than one day passed, reset streak to 1
+      // We set to 1 (not 0) because completing a lesson today counts as 1 day streak
       newStreak = 1;
-      console.log(`Streak broken (${daysDifference} days gap), resetting to ${newStreak}`);
     }
     
-    // Update stats
+    // Update stats with new streak value and last active date (today)
     const { error: updateError } = await supabase
       .from('user_stats')
       .update({
@@ -281,14 +254,11 @@ const updateUserStats = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
     
     if (updateError) {
-      console.error('Error updating user stats:', updateError);
       return false;
     }
     
-    console.log(`User stats updated: streak=${newStreak}, last_active=${today}`);
     return true;
   } catch (error) {
-    console.error('Error in updateUserStats:', error);
     return false;
   }
 };
@@ -300,7 +270,6 @@ export const addPracticeMinutes = async (minutes: number): Promise<boolean> => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No authenticated user found');
       return false;
     }
     
@@ -318,7 +287,6 @@ export const addPracticeMinutes = async (minutes: number): Promise<boolean> => {
         return true;
       }
       
-      console.error('Error fetching current user stats:', fetchError);
       return false;
     }
     
@@ -331,13 +299,11 @@ export const addPracticeMinutes = async (minutes: number): Promise<boolean> => {
       .eq('user_id', user.id);
     
     if (updateError) {
-      console.error('Error updating practice minutes:', updateError);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Error in addPracticeMinutes:', error);
     return false;
   }
 };
@@ -349,7 +315,6 @@ export const checkAndUpdateStreak = async (): Promise<number> => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No authenticated user found');
       return 0;
     }
     
@@ -367,16 +332,14 @@ export const checkAndUpdateStreak = async (): Promise<number> => {
         return newStats?.streak_days || 0;
       }
       
-      console.error('Error fetching user stats:', fetchError);
       return 0;
     }
     
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
     
-    // If already logged in today, no need to update
+    // If already logged in today, no need to check for streak reset
     if (today === currentStats.last_active_date) {
-      console.log('User already logged in today, streak maintained');
       return currentStats.streak_days;
     }
     
@@ -384,41 +347,32 @@ export const checkAndUpdateStreak = async (): Promise<number> => {
     const lastActiveDate = new Date(currentStats.last_active_date);
     lastActiveDate.setHours(0, 0, 0, 0);
     
-    // Get yesterday's date
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-    
     // Calculate days difference
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
     const daysDifference = Math.floor((todayDate.getTime() - lastActiveDate.getTime()) / (1000 * 60 * 60 * 24));
     
-    console.log(`Days since last activity: ${daysDifference}`);
-    
-    // If more than 1 day has passed, reset streak
+    // If more than 1 day has passed without completing a lesson, reset streak to 0
+    // The streak will be set to 1 when they complete their first lesson
     if (daysDifference > 1) {
-      console.log(`Streak broken (${daysDifference} days gap), resetting to 1`);
-      
-      // Update stats with reset streak
+      // Reset streak to 0 since user hasn't completed a lesson in more than a day
       const { error: updateError } = await supabase
         .from('user_stats')
         .update({
-          streak_days: 1,
+          streak_days: 0,
           last_active_date: today
         })
         .eq('user_id', user.id);
       
       if (updateError) {
-        console.error('Error updating streak:', updateError);
         return currentStats.streak_days; // Return old value if update fails
       }
       
-      return 1; // Return new streak value
+      return 0; // Return new reset streak value
     }
     
-    // User opened the app on a consecutive day, update last_active_date but don't increment streak yet
-    // (streak will increment when they complete a lesson)
+    // Just update the last_active_date
+    // Note: we are NOT incrementing streak here - that only happens on lesson completion
     const { error: updateError } = await supabase
       .from('user_stats')
       .update({
@@ -426,14 +380,9 @@ export const checkAndUpdateStreak = async (): Promise<number> => {
       })
       .eq('user_id', user.id);
     
-    if (updateError) {
-      console.error('Error updating last active date:', updateError);
-    }
-    
     // Return current streak
     return currentStats.streak_days;
   } catch (error) {
-    console.error('Error in checkAndUpdateStreak:', error);
     return 0;
   }
 }; 

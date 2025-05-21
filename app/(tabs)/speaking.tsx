@@ -1,4 +1,4 @@
-import { StyleSheet, ScrollView, View, Pressable, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View, Pressable, TouchableOpacity, ActivityIndicator, Alert, Text } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -6,7 +6,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState, useEffect, useRef, Fragment } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { useAuth } from '@/context/AuthContext';
@@ -63,6 +63,7 @@ export default function SpeakingScreen() {
   const recordingRef = useRef<Audio.Recording | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const isScreenActive = useRef(true);
 
   // Format seconds to MM:SS
   const formatTime = (seconds: number) => {
@@ -230,20 +231,17 @@ export default function SpeakingScreen() {
   // Play generated audio
   const playGeneratedAudio = async () => {
     if (!generatedAudioUrl) return;
-    
+    if (!isScreenActive.current) return;
     try {
       if (soundRef.current) {
         await soundRef.current.unloadAsync();
       }
-      
       const { sound } = await Audio.Sound.createAsync(
         { uri: generatedAudioUrl },
         { shouldPlay: true }
       );
-      
       soundRef.current = sound;
       setIsPlayingAudio(true);
-      
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && !status.isPlaying && status.didJustFinish) {
           setIsPlayingAudio(false);
@@ -257,7 +255,9 @@ export default function SpeakingScreen() {
 
   // Clean up on unmount
   useEffect(() => {
+    isScreenActive.current = true;
     return () => {
+      isScreenActive.current = false;
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
@@ -284,23 +284,23 @@ export default function SpeakingScreen() {
   };
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top + 8 }]}>  
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>  
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Page Title */}
-        <ThemedText type="title" style={styles.pageTitle}>Speaking</ThemedText>
+        <ThemedText type="title" style={styles.pageTitle}>Speaking Practice</ThemedText>
         
         {/* Voice Clone Card */}
-        <View style={[styles.voiceCloneCard, { backgroundColor: theme.tint }]}>
-          <View style={styles.voiceCloneHeader}>
-            <View style={[styles.voiceCloneIconCircle, { backgroundColor: theme.background }]}>
-              <FontAwesome5 name="user-voice" size={24} color={theme.tint} />
+        <View style={[styles.featureCard, { backgroundColor: theme.tint }]}>
+          <View style={styles.featureCardHeader}>
+            <View style={[styles.iconCircle, { backgroundColor: theme.background }]}>
+              <FontAwesome5 name="user-alt" size={24} color={theme.tint} />
             </View>
-            <ThemedText type="title" style={[styles.voiceCloneTitle, { color: theme.background }]}>
+            <ThemedText type="title" style={[styles.featureCardTitle, { color: theme.background }]}>
               Clone Your Voice
             </ThemedText>
           </View>
           
-          <ThemedText style={[styles.voiceCloneDesc, { color: theme.background }]}>
+          <ThemedText style={[styles.featureCardDesc, { color: theme.background }]}>
             Record your voice and hear how you would sound speaking Arabic!
           </ThemedText>
           
@@ -334,36 +334,39 @@ export default function SpeakingScreen() {
           ) : (
             <View style={styles.generationSection}>
               {generatedAudioUrl ? (
-                <Fragment>
+                <React.Fragment>
                   <ThemedText style={[styles.arabicText, { color: theme.background }]}>
                     {audioMessage}
                   </ThemedText>
                   
                   <TouchableOpacity
-                    style={[styles.playButton, { backgroundColor: theme.background }]}
+                    style={[styles.actionButton, { backgroundColor: theme.background }]}
                     onPress={playGeneratedAudio}
                     disabled={isPlayingAudio || isProcessing}
                   >
                     {isPlayingAudio ? (
                       <ActivityIndicator color={theme.tint} />
                     ) : (
-                      <Ionicons name="play" size={24} color={theme.tint} />
+                      <React.Fragment>
+                        <Ionicons name="play" size={20} color={theme.tint} style={styles.buttonIcon} />
+                        <ThemedText style={styles.buttonText}>Play Audio</ThemedText>
+                      </React.Fragment>
                     )}
                   </TouchableOpacity>
-                </Fragment>
+                </React.Fragment>
               ) : (
                 <TouchableOpacity
-                  style={[styles.generateButton, { backgroundColor: theme.background }]}
+                  style={[styles.actionButton, { backgroundColor: theme.background }]}
                   onPress={generateSpeech}
                   disabled={isProcessing}
                 >
                   {isProcessing ? (
                     <ActivityIndicator color={theme.tint} />
                   ) : (
-                    <Fragment>
+                    <React.Fragment>
                       <Ionicons name="language" size={20} color={theme.tint} style={styles.buttonIcon} />
                       <ThemedText style={styles.buttonText}>Generate Arabic Speech</ThemedText>
-                    </Fragment>
+                    </React.Fragment>
                   )}
                 </TouchableOpacity>
               )}
@@ -371,54 +374,65 @@ export default function SpeakingScreen() {
           )}
         </View>
         
+        {/* Section header for conversation practice */}
+        <View style={styles.sectionHeaderRow}>
+          <View style={[styles.sectionHeaderIconCircle, { backgroundColor: theme.tint }]}>
+            <MaterialCommunityIcons name="chat-processing" size={22} color={theme.background} />
+          </View>
+          <ThemedText type="subtitle" style={styles.sectionHeader}>Conversation Practice</ThemedText>
+        </View>
+        
         {/* Free Talk card */}
         <Pressable 
           style={({ pressed }) => [
             styles.freeTalkCard, 
-            { backgroundColor: theme.tint, shadowColor: theme.text, opacity: pressed ? 0.93 : 1 }
+            { backgroundColor: colorScheme === 'dark' ? '#23272F' : '#fff', opacity: pressed ? 0.9 : 1 }
           ]} 
           onPress={() => navigateToConversation(freeTalk.key, freeTalk.title, freeTalk.icon, freeTalk.context)}
         >
-          <View style={[styles.freeTalkIconCircle, { backgroundColor: theme.background }]}> 
-            <ThemedText style={styles.freeTalkIcon}>{freeTalk.icon}</ThemedText>
+          <View style={[styles.freeTalkIconContainer, { backgroundColor: theme.tint }]}> 
+            <Text style={styles.freeTalkIcon}>{freeTalk.icon}</Text>
           </View>
-          <View style={styles.freeTalkTextContainer}>
-            <ThemedText type="title" style={[styles.freeTalkTitle, { color: theme.background }]}>{freeTalk.title}</ThemedText>
-            <ThemedText style={[styles.freeTalkDesc, { color: theme.background }]}>{freeTalk.description}</ThemedText>
+          <View style={styles.topicTextContainer}>
+            <ThemedText type="defaultSemiBold" style={styles.freeTalkTitle}>{freeTalk.title}</ThemedText>
+            <ThemedText style={styles.topicDescription}>{freeTalk.description}</ThemedText>
           </View>
         </Pressable>
         
-        {/* Section header with chat icon */}
-        <View style={styles.sectionHeaderRow}>
-          <View style={styles.sectionHeaderIconCircle}>
-            <MaterialCommunityIcons name="chat-processing" size={22} color="#fff" style={styles.sectionHeaderIcon} />
-          </View>
-          <ThemedText type="subtitle" style={styles.sectionHeader}>Simulate conversations</ThemedText>
-        </View>
-        
-        {/* Topics vertical list */}
-        <View style={styles.topicsList}>
-          {topics.map((item) => (
-            <Pressable
-              key={item.key}
-              style={({ pressed }) => [
-                styles.topicCard,
-                {
-                  backgroundColor: colorScheme === 'dark' ? '#23272F' : '#fff',
-                  shadowColor: colorScheme === 'dark' ? '#000' : '#23272F',
-                  opacity: pressed ? 0.93 : 1,
-                },
-              ]}
-              onPress={() => navigateToConversation(item.key, item.title, item.icon, item.context)}
-            >
-              <View style={[styles.topicAvatarCircle, { backgroundColor: colorScheme === 'dark' ? '#181A20' : '#F5F5F7' }]}> 
-                <ThemedText style={styles.topicAvatar}>{item.icon}</ThemedText>
-              </View>
-              <View style={styles.topicTextContainer}>
-                <ThemedText type="defaultSemiBold" style={[styles.topicTitle, { color: theme.text }]}>{item.title}</ThemedText>
-              </View>
-            </Pressable>
-          ))}
+        {/* Topics grid */}
+        <View style={styles.topicsGrid}>
+          {topics.map((item, index) => {
+            // Create a consistent but varied color palette for topic icons
+            const iconColors = [
+              theme.tint,
+              '#FF8A65', // Coral
+              '#4DB6AC', // Teal
+              '#7986CB', // Indigo
+              '#9575CD', // Purple
+              '#4FC3F7', // Light Blue
+              '#FFA726', // Orange
+              '#FF7043', // Deep Orange
+            ];
+            
+            const colorIndex = index % iconColors.length;
+            const iconColor = iconColors[colorIndex];
+            
+            return (
+              <Pressable
+                key={item.key}
+                style={({ pressed }) => [
+                  styles.topicCard,
+                  { backgroundColor: colorScheme === 'dark' ? '#23272F' : '#fff', opacity: pressed ? 0.9 : 1 }
+                ]}
+                onPress={() => navigateToConversation(item.key, item.title, item.icon, item.context)}
+              >
+                <View style={[styles.topicIconCircle, { backgroundColor: iconColor }]}> 
+                  <Text style={styles.topicIcon}>{item.icon}</Text>
+                </View>
+                <ThemedText type="defaultSemiBold" style={styles.topicTitle}>{item.title}</ThemedText>
+              </Pressable>
+            );
+          })}
         </View>
       </ScrollView>
     </ThemedView>
@@ -428,210 +442,202 @@ export default function SpeakingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 0,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    padding: 16,
     paddingBottom: 32,
   },
   pageTitle: {
-    marginBottom: 18,
+    marginBottom: 24,
     fontWeight: '800',
     fontSize: 32,
     letterSpacing: -1,
-    alignSelf: 'flex-start',
   },
-  voiceCloneCard: {
-    borderRadius: 24,
-    padding: 22,
+  featureCard: {
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 28,
-    shadowOpacity: 0.13,
-    shadowRadius: 16,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    elevation: 8,
   },
-  voiceCloneHeader: {
+  featureCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
   },
-  voiceCloneIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
-  voiceCloneTitle: {
-    fontWeight: '800',
+  featureCardTitle: {
+    fontWeight: '700',
     fontSize: 22,
     letterSpacing: -0.5,
   },
-  voiceCloneDesc: {
+  featureCardDesc: {
     fontSize: 16,
     opacity: 0.95,
     fontWeight: '500',
     marginBottom: 20,
+    lineHeight: 22,
   },
   recordingSection: {
     alignItems: 'center',
     paddingVertical: 10,
   },
   recordButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   recordingTime: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   recordingHint: {
-    fontSize: 14,
+    fontSize: 15,
     opacity: 0.8,
   },
   generationSection: {
     alignItems: 'center',
     paddingVertical: 10,
   },
-  generateButton: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   buttonIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
   },
   arabicText: {
-    fontSize: 18,
+    fontSize: 20,
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 28,
-  },
-  playButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  freeTalkCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 24,
-    padding: 22,
-    marginBottom: 28,
-    marginTop: 0,
-    shadowOpacity: 0.13,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  freeTalkIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 22,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
-  freeTalkIcon: {
-    fontSize: 36,
-    lineHeight: 72,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    paddingTop: 2,
-  },
-  freeTalkTextContainer: {
-    flex: 1,
-  },
-  freeTalkTitle: {
-    marginBottom: 6,
-    fontWeight: '800',
-    fontSize: 26,
-    letterSpacing: -0.5,
-  },
-  freeTalkDesc: {
-    fontSize: 16,
-    opacity: 0.95,
+    marginBottom: 20,
+    lineHeight: 32,
     fontWeight: '500',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
-    marginLeft: 2,
-    gap: 8,
+    marginBottom: 20,
+    marginTop: 8,
   },
   sectionHeaderIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#23272F',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  sectionHeaderIcon: {
-    marginTop: 1,
+    marginRight: 12,
   },
   sectionHeader: {
     fontWeight: '700',
-    fontSize: 20,
+    fontSize: 22,
     letterSpacing: -0.2,
   },
-  topicsList: {
-    gap: 18,
-  },
-  topicCard: {
+  freeTalkCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 24,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  topicAvatarCircle: {
+  freeTalkIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 18,
+    overflow: 'hidden',
+  },
+  freeTalkIcon: {
+    fontSize: 32,
+    color: '#fff',
+    textAlign: 'center',
+    includeFontPadding: false,
+    marginTop: 2,
+  },
+  freeTalkTitle: {
+    fontSize: 18,
+    marginBottom: 6,
+    fontWeight: '700',
+  },
+  topicsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  topicCard: {
+    width: '48%',
+    borderRadius: 18,
+    padding: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
+    marginBottom: 12,
+    alignItems: 'center',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  topicIconCircle: {
     width: 60,
     height: 60,
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 20,
+    marginBottom: 14,
     overflow: 'hidden',
-    backgroundColor: '#F5F5F7',
   },
-  topicAvatar: {
+  topicIcon: {
     fontSize: 28,
-    lineHeight: 60,
     textAlign: 'center',
-    textAlignVertical: 'center',
+    color: '#fff',
     includeFontPadding: false,
-    paddingTop: 2,
+    marginTop: 2,
   },
   topicTextContainer: {
     flex: 1,
   },
   topicTitle: {
-    fontSize: 18,
+    fontSize: 16,
+    textAlign: 'center',
     fontWeight: '600',
-    letterSpacing: -0.2,
+  },
+  topicDescription: {
+    fontSize: 14,
+    opacity: 0.8,
+    lineHeight: 20,
   },
 });

@@ -38,9 +38,6 @@ export function DialectSelector() {
     setSelectedDialectId(selectedDialect.id); // Update UI immediately for responsiveness
     await setDialect(selectedDialect); // Save to context and backend
     setModalVisible(false);
-    
-    // Log the change to confirm it's working
-    console.log(`Dialect changed to: ${selectedDialect.name}`);
   };
   
   // Main selector header component content
