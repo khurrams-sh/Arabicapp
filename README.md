@@ -1,50 +1,42 @@
-# Welcome to your Expo app 👋
+# Saylo AI - Arabic Learning App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile app for practicing spoken Arabic through AI-powered voice conversations.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+- **Frontend**: React Native with Expo
+- **Backend**: AWS Lambda + Supabase Edge Functions  
+- **Database**: Supabase
+- **AI**: OpenAI Whisper, GPT-4o, TTS
 
+## Setup
+
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
-
+2. Start the app:
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. Run on device:
+   - Scan QR code with Expo Go app
+   - Press `i` for iOS simulator
+   - Press `a` for Android emulator
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Project Structure
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- `app/` - React Native app with file-based routing
+- `components/` - Reusable UI components
+- `backend/` - Serverless function code
+- `context/` - React context providers
+- `utils/` - Helper functions
 
-## Get a fresh project
+## Features
 
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Voice chat with AI tutor
+- Multiple Arabic dialects (Egyptian, Levantine, Gulf, MSA)
+- Lesson tracking and progress
+- User authentication and profiles
